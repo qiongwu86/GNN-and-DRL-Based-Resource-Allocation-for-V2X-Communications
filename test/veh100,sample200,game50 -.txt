@@ -1,0 +1,3 @@
+The number of vehicle is  100
+Mean of the V2I rate is that  77.0695975830726
+Mean of Fail percent is that  0.07042252812650622 0.05515706137235853

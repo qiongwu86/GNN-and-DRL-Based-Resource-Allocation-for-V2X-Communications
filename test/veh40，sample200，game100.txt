@@ -1,0 +1,2 @@
+Mean of the V2I rate is that  144.45015869540683
+Mean of Fail percent is that  0.028877961806029605

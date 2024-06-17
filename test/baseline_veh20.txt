@@ -1,0 +1,3 @@
+The number of vehicles is  20
+mean of V2I rate is that  161.48022239241072
+mean of percent is  0.0363765209968849
