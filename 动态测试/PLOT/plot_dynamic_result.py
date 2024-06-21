@@ -1,69 +1,70 @@
 import os
-import random
-
-os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
-# os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 import numpy as np
-
 import matplotlib.pyplot as plt
-from matplotlib.pyplot import MultipleLocator
+from matplotlib.ticker import MultipleLocator
 
-plt.rcParams['font.sans-serif']=['Arial'] #显示中文
-plt.rcParams['axes.unicode_minus'] = False
-plt.rc("font",family="Arial",size="10.5")
-
-def moving_average(a, n=10):
-    ret = np.cumsum(a, dtype=float, axis=0)
-    ret[n:] = ret[n:] - ret[:-n]
-    return ret[n - 1:] / n
-
+# 假设数据已经加载好
 dir = '../test/'
-a = 1-np.loadtxt(dir+'Fail_percent.txt')
-b = np.loadtxt(dir+'V2I_Rate.txt')
+a = 1 - np.loadtxt(dir + 'Fail_percent.txt')
+b = np.loadtxt(dir + 'V2I_Rate.txt')
+num_veh = np.loadtxt(dir + 'num_veh.txt')
 
+# 转换为列表
+p = a.tolist()
+rate = b.tolist()
+num_veh_list = num_veh.tolist()
 
-small_five_size = 10.5
-p =a.tolist()
-rate =b.tolist()
-
-
+# 时间数据
 x_data = np.linspace(0, 250, 5000)
 
-#my_x_ticks = np.arange(4, 13, 2) # 原始数据有13个点，故此处为设置从0开始，间隔为1
-fig, ax1 = plt.subplots()
-#plt.tick_params(bottom=False)
-#plt.xticks(my_x_ticks)
+# 设置字体大小
+small_five_size = 10  # 调整内容字体大小
+y_axis_font_size = 8  # 调整Y轴刻度字体大小
+
+# 创建图形
+fig, ax1 = plt.subplots(figsize=(10, 6))
+
+# 设置第一个y轴刻度间隔
 y_major_locator = MultipleLocator(0.01)
 ax1.yaxis.set_major_locator(y_major_locator)
-#plt.ylim(120,1500)
-#box = plt.get_position()
-#plt.set_position([box.x0, box.y0, box.width , box.height* 0.8])
-ax1.plot(x_data, p, label='Instantaneous V2V Success Rate', color='b')
-ax1.set_xticks(np.arange(0, 251, 25))
-ax1.set_ylabel('V2V Communication Success Rate', fontsize=10.5)
-ax1.set_xlabel('Time (s)', fontsize=10.5)
 
+# 绘制V2V成功率
+ax1.plot(x_data, p, label='Instantaneous V2V Success Rate', color='blue', linewidth=2)
+ax1.set_xticks(np.arange(0, 251, 25))
+ax1.set_ylabel('V2V Communication Success Rate', fontsize=small_five_size, color='blue')
+ax1.set_xlabel('Time (s)', fontsize=small_five_size)
+ax1.tick_params(axis='y', which='major', labelcolor='blue', labelsize=y_axis_font_size)
+
+# 设置第二个y轴
 ax2 = ax1.twinx()
 ax2.yaxis.set_major_locator(MultipleLocator(10))
-# Plot the second set of data on the second y-axis
-ax2.plot(x_data, rate, label='Instantaneous V2I Rate', color='orange')
-ax2.set_ylabel('V2I Communication Rate', fontsize=10.5) # 假设rate代表的是另一个量，加上标
 
+# 绘制V2I通信速率
+ax2.plot(x_data, rate, label='Instantaneous V2I Rate', color='orange', linewidth=2)
+ax2.set_ylabel('V2I Communication Rate', fontsize=small_five_size, color='orange')
+ax2.tick_params(axis='y', which='major', labelcolor='orange', labelsize=y_axis_font_size)
 
-# 设置刻度字体大小
-ax1.tick_params(axis='both', which='major', labelsize=10.5)
-ax2.tick_params(axis='y', which='major', labelsize=10.5)
-# plt.ylabel('epoch数目', fontsize=small_five_size)
-# plt.xlabel('参与车辆数', fontsize=small_five_size)
-ax1.legend(loc='upper right', bbox_to_anchor=(0.98, 0.98), fontsize=10.5)
-ax2.legend(loc='upper right', bbox_to_anchor=(0.98, 0.90), fontsize=10.5)
+# 设置第三个y轴
+ax3 = ax1.twinx()
+# 将第三个Y轴靠近第二个Y轴
+ax3.spines["right"].set_position(("outward", 40))  # 调整间距
+ax3.yaxis.set_major_locator(MultipleLocator(10))
 
+# 绘制车辆数目
+ax3.plot(x_data, num_veh_list, label='Number of Vehicles', color='green', linewidth=2)
+ax3.set_ylabel('Number of Vehicles', fontsize=small_five_size, color='green')
+ax3.tick_params(axis='y', which='major', labelcolor='green', labelsize=y_axis_font_size)
+
+# 设置图例位置和字体大小
+ax1.legend(loc='upper right', bbox_to_anchor=(0.98, 0.65), fontsize='small')
+ax2.legend(loc='upper right', bbox_to_anchor=(0.98, 0.57), fontsize='small')
+ax3.legend(loc='upper right', bbox_to_anchor=(0.98, 0.49), fontsize='small')
+
+# 添加网格
 plt.grid(linestyle=':')
-plt.xticks(fontsize=small_five_size)
-plt.yticks(fontsize=small_five_size)
-#plt.legend(loc='upper left', bbox_to_anchor=(0.99, 1.03),ncol=1)
-#plt.legend(loc=2, bbox_to_anchor=(1.05,1.0),borderaxespad = 0)
-#plt.subplots_adjust(bottom=0.15)
-dir2=dir = '../test/'
-plt.savefig(dir+'Fig_dynamic_result2', dpi=600)
+fig.tight_layout(pad=5.0)
+# 保存图形
+plt.savefig(dir + 'Fig_dynamic_result2_3y_improved.png', dpi=600)
+
+# 显示图形
 plt.show()
