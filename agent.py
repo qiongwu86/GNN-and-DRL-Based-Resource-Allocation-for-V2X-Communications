@@ -379,7 +379,7 @@ class Agent(BaseModel):
         for game_idx in range(number_of_game):
             self.env.new_random_game(self.num_vehicle)
             better_state = self.initial_better_state(0, self.GraphSAGE)
-            test_sample = 200
+            test_sample = 220
             Rate_list = []
             print('test game idx:', game_idx)
             print('The number of vehicle is ', len(self.env.vehicles))
@@ -528,13 +528,14 @@ class Agent(BaseModel):
                     sorted_idx = np.argsort(self.env.individual_time_limit[i, :])
                     for j in sorted_idx:
                         # state_old = self.get_state([i,j])
-                        start = time.perf_counter()
                         idx = []
                         idx.append(3 * i + j)
                         state_old = self.get_state([i, j])
                         self.G.features[3 * i + j, :] = state_old[:60]
+                        start = time.perf_counter()
                         node_embeddings = self.G.test_Complete(self.channel_reward, 0, idx,
                                                                self.GraphSAGE)
+                        mid_time_1 = time.perf_counter()
                         max_value = np.max(node_embeddings)
                         # 计算比例因子
                         scale_factor = max_value
@@ -546,9 +547,16 @@ class Agent(BaseModel):
                         better_state_old = np.concatenate((node_embeddings, state_old), axis=0)
                         action = self.predict(better_state_old, 0, True)
                         self.merge_action([i, j], action)
-                        mid_time_1 = time.perf_counter()
+
                         elapsed_time_1 = mid_time_1 - start
-                        print(f"完全图代码一次运行时间：{elapsed_time_1:.8f}秒")
+                        # print(f"完全图代码一次运行时间：{elapsed_time_1:.8f}秒")
+                        time_left_list.append(elapsed_time_1)
+
+                if time_left_list:
+                    average_time = sum(time_left_list) / len(time_left_list)
+                    print(f"所有循环的平均运行时间：{average_time:.8f}秒")
+                else:
+                    print("没有记录到任何运行时间。")
     def play_un_complete_graph(self, n_step=100, n_episode=100, test_ep=None, render=False):
         number_of_game = 100
         V2I_Rate_list = np.zeros(number_of_game)
@@ -590,6 +598,7 @@ class Agent(BaseModel):
                         first_order_neighs, second_order_neighs = self.G.test_get_neighs(idx)
                         start = time.perf_counter()
                         node_embeddings = self.G.test_unComplete(idx,first_order_neighs, second_order_neighs)
+                        mid_time_1 = time.perf_counter()
                         # mid_time_1 = time.perf_counter()
                         max_value = np.max(node_embeddings)
                         # 计算比例因子
@@ -601,11 +610,18 @@ class Agent(BaseModel):
                         # print('state_old[3*i+j]', state_old.shape)
                         better_state_old = np.concatenate((node_embeddings, state_old), axis=0)
                         action = self.predict(better_state_old, 0, True)
-                        mid_time_1 = time.perf_counter()
+
                         self.merge_action([i, j], action)
 
                         elapsed_time_1 = mid_time_1 - start
-                        print(f"非完全图代码一次运行时间：{elapsed_time_1:.8f}秒")
+                        # print(f"非完全图代码一次运行时间：{elapsed_time_1:.8f}秒")
+                        time_left_list.append(elapsed_time_1)
+
+                if time_left_list:
+                    average_time = sum(time_left_list) / len(time_left_list)
+                    print(f"所有循环的平均运行时间：{average_time:.8f}秒")
+                else:
+                    print("没有记录到任何运行时间。")
 
 def main():
     up_lanes = [3.5 / 2, 3.5 / 2 + 3.5, 250 + 3.5 / 2, 250 + 3.5 + 3.5 / 2, 500 + 3.5 / 2, 500 + 3.5 + 3.5 / 2]
@@ -625,8 +641,8 @@ def main():
     # tf.config.gpu.set_per_process_memory_fraction(...)
     # tf.config.gpu.set_allow_growth(True)
     agent = Agent([], Env)  # 注意，在 TensorFlow 2.x 中，不再需要传递会话(sess)
-    agent.train()
-    agent.play()
+    # agent.train()
+    # agent.play()
 
 
 if __name__ == '__main__':

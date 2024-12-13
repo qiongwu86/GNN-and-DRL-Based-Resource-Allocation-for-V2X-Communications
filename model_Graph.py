@@ -48,13 +48,15 @@ class GraphModel(keras.Model):
     def call(self, inputs):
         features, batch_nodes, s1_neighs, s2_neighs, s1_weights, s2_weights = inputs
         s1_weights = tf.convert_to_tensor(s1_weights, dtype=tf.float32)
+        # print("s1_weights:", s1_weights)
+        # print("s2_weights:", s2_weights)
         s2_weights = tf.convert_to_tensor(s2_weights, dtype=tf.float32)
         if self.depth == 1:
             node_fea = tf.nn.embedding_lookup(features, batch_nodes)
             neigh_1_fea = tf.nn.embedding_lookup(features, s1_neighs)
             weights_expanded = tf.expand_dims(s1_weights, axis=-1)
             weighted_features = tf.multiply(neigh_1_fea, weights_expanded)
-            tf.print('agg_node1', neigh_1_fea)
+            # tf.print('agg_node1', neigh_1_fea)
             agg_result = self.aggregator((node_fea, weighted_features), self.dense_layers_first_agg, self.concat)
         else:
             node_fea = tf.nn.embedding_lookup(features, batch_nodes)
@@ -64,6 +66,8 @@ class GraphModel(keras.Model):
             weights_expanded = tf.expand_dims(s1_weights, axis=-1)
             # tf.print("weights_expanded shape:", weights_expanded.shape)
             # tf.print("weights_expanded dtype:", weights_expanded.dtype)
+            # tf.print("neigh_1_fea shape:", neigh_1_fea.shape)
+            # tf.print("neigh_1_fea dtype:", neigh_1_fea.dtype)
             weighted_features_s1 = tf.multiply(neigh_1_fea, weights_expanded)
             # tf.print('neigh_1_fea', neigh_1_fea)
             # tf.print('weights_expanded', weights_expanded)
@@ -85,4 +89,19 @@ class GraphModel(keras.Model):
         # for layer in self.classifier_layers:
         #     classifier_output = layer(classifier_output)
 
+        return agg_result
+
+    def call_without_weights(self, inputs):
+        features, batch_nodes, s1_neighs, s2_neighs = inputs
+        if self.depth == 1:
+            node_fea = tf.nn.embedding_lookup(features, batch_nodes)
+            neigh_1_fea = tf.nn.embedding_lookup(features, s1_neighs)
+            agg_result = self.aggregator((node_fea, neigh_1_fea), self.dense_layers_first_agg, self.concat)
+        else:
+            node_fea = tf.nn.embedding_lookup(features, batch_nodes)
+            neigh_1_fea = tf.nn.embedding_lookup(features, s1_neighs)
+            agg_node = self.aggregator((node_fea, neigh_1_fea), self.dense_layers_first_agg, self.concat)
+            neigh_2_fea = tf.nn.embedding_lookup(features, s2_neighs)
+            agg_neigh1 = self.aggregator((neigh_1_fea, neigh_2_fea), self.dense_layers_first_agg, self.concat)
+            agg_result = self.aggregator((agg_node, agg_neigh1), self.dense_layers_second_agg, self.concat)
         return agg_result

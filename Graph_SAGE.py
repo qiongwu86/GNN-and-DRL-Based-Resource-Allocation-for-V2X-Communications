@@ -172,23 +172,39 @@ class GraphSAGE_sup(keras.Model):
         self.order_nodes = order_nodes
 
     def test_Complete(self, channel_reward, step, idx, train_flag = True):
+        neighs_1_weights = []
+        neighs_2_weights = []
         channel_reward = tf.convert_to_tensor(channel_reward, dtype=tf.float32)
         first_order_neighs = np.arange(3*self.num_vehicle)
         second_order_neighs = np.arange(3*self.num_vehicle)
         second_order_neighs = np.tile(second_order_neighs, (3*self.num_vehicle, 1))
         first_order_neighs = first_order_neighs.reshape(1, -1)  # -1告诉NumPy自动计算这个维度的大小
         second_order_neighs = second_order_neighs.reshape(1,60,-1)
+        # print('idx', idx)
         inputs = (self.features, idx, first_order_neighs, second_order_neighs)
-        agg_result = self.G_model(inputs)
+        agg_result = self.G_model.call_without_weights(inputs)
         agg_result = agg_result.numpy()
         print(agg_result)
         return agg_result
+
+    def get_all_weights(self, node_indices, added_nodes_order):
+        all_first_layer_weights = []
+        all_second_layer_weights = []
+
+        for node_index in node_indices:
+            node_label = added_nodes_order[node_index]
+            n = len(added_nodes_order)
+            first_layer_weights = []
+            second_layer_weights = []
+
+        return all_first_layer_weights, all_second_layer_weights
+
     def test_get_neighs(self,idx):
         first_order_neighs, second_order_neighs, s1_weights, s2_weights = self.fetch_batch(self.order_nodes, idx)
         return first_order_neighs, second_order_neighs
     def test_unComplete(self, idx, first_order_neighs, second_order_neighs):
         inputs = (self.features, idx, first_order_neighs, second_order_neighs)
-        agg_result = self.G_model(inputs)
+        agg_result = self.G_model.call_without_weights(inputs)
         agg_result = agg_result.numpy()
         return agg_result
 
@@ -198,14 +214,17 @@ class GraphSAGE_sup(keras.Model):
     def use_GraphSAGE(self, channel_reward, step, idx, train_flag = True):
         channel_reward = tf.convert_to_tensor(channel_reward, dtype=tf.float32)
         first_order_neighs, second_order_neighs, s1_weights, s2_weights = self.fetch_batch(self.order_nodes, idx)
-        # print('s1_weights',s1_weights)
+        # print("first_order_neighs:", first_order_neighs)
+        # print("second_order_neighs:", second_order_neighs)
+        # print("s1_weights:", s1_weights)
+        # print("s2_weights:", s2_weights)
         inputs = (self.features, idx, first_order_neighs, second_order_neighs, s1_weights, s2_weights)
         if train_flag == True and step % 50 == 0 and step > 0 :
             with tf.GradientTape() as G_tape:
-                agg_result = self.G_model(inputs)
+                agg_result = self.G_model.call(inputs)
                 agg_result_target = self.G_model_target(inputs)
                 # agg_result_target = 0.3*agg_result_target + channel_reward
-                tf.print('agg_result first row:', agg_result[0])
+                # tf.print('agg_result first row:', agg_result[0])
                 # # print('agg_result_target', agg_result_target)
                 # distance_tensor = tf.norm(agg_result - agg_result_target, axis=1)
                 difference = agg_result - 0.5 * agg_result_target - 0.5 * channel_reward

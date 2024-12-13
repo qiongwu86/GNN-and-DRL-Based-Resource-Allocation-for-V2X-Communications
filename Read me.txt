@@ -1,3 +1,13 @@
 The parameters provided in the document are early results, intended solely for testing whether there are errors in the code. During training, you can try changing the number of vehicles for secondary training, as altering the number of vehicles will enable the agent to learn results in more complex channel occupancy situations. Finally, during our code testing, we actually found some unresolved issues. Firstly, the results obtained by automatically transitioning to the test phase during training were not as good as those obtained by directly running the test section. Secondly, after allocating actions to all vehicles, we observed that most of the time only 19 channels were occupied, which requires further analysis. Finally, thank you for your attention to our research. If you encounter any issues during replication or reference, please feel free to contact us via email, and we will explain our current work as clearly as possible.
 
 文件中提供的参数为早期结果，仅供测试代码是否存在错误。在训练过程中，可以尝试更改不同的车辆数目进行二次训练，车辆数目的改变会使智能体学习到更复杂的信道占用情况时的结果。最后，我们的代码测试时其实发现一些问题还未解决，首先，训练时自动转入测试阶段取得的结果不如直接运行测试部分取得的结果。第二，我们统计智能体给所有车辆分配动作之后的信道占用情况，发现大多数时候只占用了19个信道，这还需要进一步分析。最后，感谢您关注到我们的研究，在复现或参考过程中如果遇到问题可以通过邮箱与我们取得联系，我们将尽可能清晰的阐明现有的工作。
+
+
+
+修正了main函数中 agent.play_complete_graph()和agent.play_un_complete_graph()的出错问题，原因是在输入中没有边的权重参数。关于环境中运行出错问题，检查各个num_veh的设置是否相同，如果有的是20有的是60会出现错误。agent.play_complete_graph()和agent.play_un_complete_graph()这两部分代码的主要功能是测试两种图构建方式的运行时间，硬件不同可能导致结果不同。
+
+代码环境是python3.8，tensorflow2.6的gpu版，对应的cuda版本可在网上查询。论文地址：https://ieeexplore.ieee.org/document/10697115
+
+The issues in the main function related to agent.play_complete_graph() and agent.play_un_complete_graph() were resolved. The problems were caused by the absence of edge weight parameters in the input. Regarding the runtime errors in the environment, please check whether the num_veh settings are consistent. If some are set to 20 and others to 60, errors may occur. The primary function of agent.play_complete_graph() and agent.play_un_complete_graph() is to test the runtime of two different graph construction methods, and results may vary depending on the hardware used.
+
+The code environment uses Python 3.8 and the GPU version of TensorFlow 2.6. The corresponding CUDA version can be found online. The paper is available at: https://ieeexplore.ieee.org/document/10697115

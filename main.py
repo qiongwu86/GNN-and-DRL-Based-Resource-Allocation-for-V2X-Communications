@@ -73,9 +73,9 @@ def main():
   Env = Environ(down_lanes, up_lanes, left_lanes, right_lanes, width, height)
   Env.new_random_game()
   agent = Agent([], Env)
-  #agent.train()
-  agent.play()
-  #agent.play_complete_graph()
+  # agent.train()
+  # agent.play()
+  # agent.play_complete_graph()
   # agent.play_un_complete_graph()
 
 if __name__ == '__main__':

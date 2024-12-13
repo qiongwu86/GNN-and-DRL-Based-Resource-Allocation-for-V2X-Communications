@@ -276,7 +276,7 @@ class Environ:
         # ===================================
         self.n_step = 0
         self.vehicles = []
-        n_Veh = 60
+        n_Veh = 20
         self.n_Veh = n_Veh
         self.add_new_vehicles_by_number(int(self.n_Veh/4))
         step = 1000
