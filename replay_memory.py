@@ -7,7 +7,7 @@ import numpy as np
 class ReplayMemory:
     def __init__(self, model_dir):
         self.model_dir = model_dir        
-        self.memory_size = 1000000
+        self.memory_size = 500000
         self.actions = np.empty(self.memory_size, dtype = np.uint8)
         self.rewards = np.empty(self.memory_size, dtype = np.float64)
         self.prestate = np.empty((self.memory_size, 102), dtype = np.float16)

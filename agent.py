@@ -25,7 +25,7 @@ class Agent(BaseModel):
         self.memory = ReplayMemory(model_dir) 
         self.max_step = 100000
         self.RB_number = 20
-        self.num_vehicle = 20
+        self.num_vehicle = 40
         print('-------------------------------------------')
         print(self.num_vehicle)
         print('-------------------------------------------')
@@ -33,7 +33,7 @@ class Agent(BaseModel):
         self.action_all_with_power_training = np.zeros([20, 3, 2],dtype = 'int32')   # this is actions that taken by V2V links with power
         self.reward = []
         self.learning_rate = 0.01
-        self.learning_rate_minimum = 0.0001
+        self.learning_rate_minimum = 0.0005
         self.learning_rate_decay = 0.96
         self.learning_rate_decay_step = 500000
         self.target_q_update_step = 100
@@ -85,7 +85,7 @@ class Agent(BaseModel):
         # ==========================
         #  Select actions
         # ======================
-        ep = 1/(step/10000 + 1)
+        ep = 1/(step/20000 + 1)
         if random.random() < ep and test_ep == False:   # epsion to balance the exporation and exploition
             action = np.random.randint(60)
         else:
@@ -170,6 +170,9 @@ class Agent(BaseModel):
         #self.G = GraphSAGE_sup(self.env)
         num_game, self.update_count, ep_reward = 0, 0, 0.
         total_reward, self.total_loss, self.total_q = 0.,0.,0.
+        idx_renew_environment = 0
+        renew_bound_rate = 150
+        renew_bound_p = 0.05
         max_avg_ep_reward = 0
         ep_reward, actions = [], []        
         mean_big = 0
@@ -179,16 +182,37 @@ class Agent(BaseModel):
         self.env.new_random_game(20)#车辆数目二十
         self.GraphSAGE = True
         better_state = self.initial_better_state(0, self.GraphSAGE)
-        for self.step in (range(0, 38001)): # need more configuration
+        for self.step in (range(0, 50001)): # need more configuration
             if self.step == 0:                   # initialize set some varibles
                 num_game, self.update_count,ep_reward = 0, 0, 0.
                 total_reward, self.total_loss, self.total_q = 0., 0., 0.
                 ep_reward, actions = [], []
             # prediction
             # action = self.predict(self.history.get())
-            if (self.step % 2000 == 1):
-                self.env.new_random_game(20)    #定期重置环境来避免过度拟合到特定的初始条件或车辆配置
-                better_state = self.initial_better_state(0, self.GraphSAGE)
+            if (self.step % 2000 == 1 and self.step > 1):
+                idx_renew_environment = 0
+                # test_rate, percent = self.test_environment()  # 测试环境，获取 test_rate
+                # n1 = np.minimum(renew_bound_rate + 10, 165)
+                # n2 = np.maximum(renew_bound_p - 0.01, 0.025)
+                # print('n1', n1)
+                # print('n2', n2)
+                # if (test_rate > n1 and percent < n2):
+                while True:
+                    print('renew environment')
+                    self.env.new_random_game(20)  # 假设这是重置环境的操作
+                    idx_renew_environment += 1
+                    better_state = self.initial_better_state(0, self.GraphSAGE)  # 初始化更好的状态
+                    test_rate, percent = self.test_environment()  # 测试环境，获取 test_rate
+                    # 如果 test_rate 大于 160，则继续循环
+                    if test_rate <= renew_bound_rate or percent > renew_bound_p:
+                        break  # 如果满足条件，退出循环
+                    if idx_renew_environment > 5:
+                        idx_renew_environment = 0
+                        renew_bound_rate += 5
+                        renew_bound_p -= 0.01
+                        print('renew_bound_rate', renew_bound_rate)
+                        print('renew_bound_p', renew_bound_p)
+
             # if (self.step % 200 ==0):#设置每多少步切换一次智能体获取的状态（有或没有来自GraphSAGE的信息）
                 # self.GraphSAGE = not self.GraphSAGE
                 # print('self.GraphSAGE', self.GraphSAGE)
@@ -299,7 +323,7 @@ class Agent(BaseModel):
             #                     better_state_old = np.concatenate((node_embeddings, state_old), axis=0)
             #                     action = self.predict(better_state_old, self.step, True)
             #                     self.merge_action([i, j], action)
-            #                 if i % (len(self.env.vehicles)/10) == 1:
+            #                 if i % (len(self.env.vehicles)/5) == 1:
             #                     action_temp = self.action_all_with_power.copy()
             #                     reward, percent = self.env.act_asyn(action_temp) #self.action_all)
             #                     Rate_list.append(np.sum(reward))
@@ -327,7 +351,56 @@ class Agent(BaseModel):
             #     plt.savefig('loss_plot.png', dpi=300)
              
 
-                    
+    def test_environment(self):
+        V2I_Rate_list = np.zeros(1)
+        Fail_percent_list = np.zeros(1)
+        test_sample = 200
+        Rate_list = []
+        time_left_list = []
+        # step = 0
+        for k in range(test_sample):
+            # print(k)
+            action_temp = self.action_all_with_power.copy()
+            # start = time.perf_counter()
+            for i in range(len(self.env.vehicles)):
+                self.action_all_with_power[i, :, 0] = -1
+                sorted_idx = np.argsort(self.env.individual_time_limit[i, :])
+                for j in sorted_idx:
+                    # state_old = self.get_state([i,j])
+                    # step = step + 1
+                    idx = []
+                    idx.append(3 * i + j)
+                    state_old = self.get_state([i, j])
+                    self.G.features[3 * i + j, :] = state_old[:60]
+                    node_embeddings = self.G.use_GraphSAGE(self.channel_reward, 0, idx,
+                                                           self.GraphSAGE)
+                    max_value = np.max(node_embeddings)
+                    # 计算比例因子
+                    scale_factor = max_value
+                    # 将数组中的每个值除以比例因子
+                    node_embeddings = node_embeddings / (scale_factor + 0.0001)
+                    node_embeddings = np.squeeze(node_embeddings)
+                    # print('node_embeddings',node_embeddings.shape)
+                    # print('state_old[3*i+j]', state_old.shape)
+                    better_state_old = np.concatenate((node_embeddings, state_old), axis=0)
+                    action = self.predict(better_state_old, 0, True)
+                    self.merge_action([i, j], action)
+                # mid_time_1 = time.perf_counter()
+                if i % (len(self.env.vehicles) // 10) == 1:
+                    action_temp = self.action_all_with_power.copy()
+                    # print("actions_temp", action_temp)
+                    reward, percent = self.env.act_asyn(action_temp)  # self.action_all)
+                    # print('reward', np.sum(reward))
+                    Rate_list.append(np.sum(reward))
+
+        V2I_Rate_list[0] = np.mean(np.asarray(Rate_list))
+
+        mean_of_V2I_Rate = np.mean(V2I_Rate_list[0])
+        print('Mean of the V2I rate is that ', mean_of_V2I_Rate)
+        print('Mean of Fail percent is that ', percent)
+        return mean_of_V2I_Rate, percent
+        # print('action is that', action_temp[0,:])
+    # print('Test Reward is ', np.mean(test_result))
             
     def q_learning_mini_batch(self):
 
@@ -379,7 +452,7 @@ class Agent(BaseModel):
         for game_idx in range(number_of_game):
             self.env.new_random_game(self.num_vehicle)
             better_state = self.initial_better_state(0, self.GraphSAGE)
-            test_sample = 220
+            test_sample = 200
             Rate_list = []
             print('test game idx:', game_idx)
             print('The number of vehicle is ', len(self.env.vehicles))
@@ -387,6 +460,7 @@ class Agent(BaseModel):
             power_select_list_0 = []
             power_select_list_1 = []
             power_select_list_2 = []
+            # step = 0
             for k in range(test_sample):
                 #print(k)
                 action_temp = self.action_all_with_power.copy()
@@ -396,12 +470,12 @@ class Agent(BaseModel):
                     sorted_idx = np.argsort(self.env.individual_time_limit[i, :])
                     for j in sorted_idx:
                         # state_old = self.get_state([i,j])
-
+                        # step = step + 1
                         idx = []
                         idx.append(3 * i + j)
                         state_old = self.get_state([i, j])
                         self.G.features[3 * i + j, :] = state_old[:60]
-                        node_embeddings = self.G.use_GraphSAGE(self.channel_reward, 0, idx,
+                        node_embeddings = self.G.use_GraphSAGE(self.channel_reward,0, idx,
                                                                self.GraphSAGE)
                         max_value = np.max(node_embeddings)
                         # 计算比例因子
@@ -425,10 +499,11 @@ class Agent(BaseModel):
                         if power_selection == 2:
                             power_select_list_2.append(state_old[-1])
                     # mid_time_1 = time.perf_counter()
-                    if i % (len(self.env.vehicles) // 10) == 1:
+                    if i % (len(self.env.vehicles) // 5) == 1:
                         action_temp = self.action_all_with_power.copy()
                     #print("actions_temp", action_temp)
                         reward, percent = self.env.act_asyn(action_temp)  # self.action_all)
+                        print('reward', np.sum(reward))
                         Rate_list.append(np.sum(reward))
                     # mid_time_2 = time.perf_counter()
                     # elapsed_time_1 = mid_time_1 - start
@@ -438,7 +513,19 @@ class Agent(BaseModel):
                 #print('Rate_list', Rate_list)
                 # print("actions", self.action_all_with_power)
                 #print(k)
-            
+                # print('action', self.action_all_with_power.shape)
+                # channel_choices = self.action_all_with_power[:, :, 0].astype(int).flatten()
+                #
+                # # 统计每个信道被选择的次数
+                # channel_counts = np.bincount(channel_choices, minlength=20)
+                #
+                # # 转换为列表（可选）
+                # channel_counts = channel_counts.tolist()
+                #
+                # # 打印结果
+                # for channel_index, count in enumerate(channel_counts):
+                #     print(f"信道 {channel_index} 被选择了 {count} 次")
+
             number_0, bin_edges = np.histogram(power_select_list_0, bins= 10)
 
             number_1, bin_edges = np.histogram(power_select_list_1, bins= 10)

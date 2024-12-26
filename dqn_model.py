@@ -4,7 +4,7 @@ import tensorflow as tf
 class DQNModel:
     def __init__(self):
         self.learning_rate = 0.01
-        self.learning_rate_minimum = 0.0001
+        self.learning_rate_minimum = 0.0005
         self.learning_rate_decay = 0.96
         self.learning_rate_decay_step = 500000
         self.initialize_network()
@@ -20,11 +20,11 @@ class DQNModel:
 
         model = tf.keras.Sequential([
             tf.keras.layers.InputLayer(input_shape=(n_input,)),
-            tf.keras.layers.Dense(500, activation='relu',
+            tf.keras.layers.Dense(700, activation='relu',
                                   kernel_initializer=tf.keras.initializers.TruncatedNormal(stddev=0.1)),
-            tf.keras.layers.Dense(250, activation='relu',
+            tf.keras.layers.Dense(350, activation='relu',
                                   kernel_initializer=tf.keras.initializers.TruncatedNormal(stddev=0.1)),
-            tf.keras.layers.Dense(120, activation='relu',
+            tf.keras.layers.Dense(180, activation='relu',
                                   kernel_initializer=tf.keras.initializers.TruncatedNormal(stddev=0.1)),
             tf.keras.layers.Dense(n_output, activation='relu',
                                   kernel_initializer=tf.keras.initializers.TruncatedNormal(stddev=0.1))
