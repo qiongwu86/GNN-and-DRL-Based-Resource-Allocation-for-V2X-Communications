@@ -25,7 +25,7 @@ class Agent(BaseModel):
         self.memory = ReplayMemory(model_dir) 
         self.max_step = 100000
         self.RB_number = 20
-        self.num_vehicle = 40
+        self.num_vehicle = 20
         print('-------------------------------------------')
         print(self.num_vehicle)
         print('-------------------------------------------')
